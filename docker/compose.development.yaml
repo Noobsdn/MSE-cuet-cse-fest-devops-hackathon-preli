@@ -1,0 +1,73 @@
+# services:
+  # backend:
+
+  # gateway:
+
+  # mongo:
+
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data_dev:/data/db
+      - mongo_backup_dev:/data/backup
+    networks:
+      - backend_net
+    # No ports exposed: Mongo is private
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    container_name: backend-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: development
+      MONGO_URI: ${MONGO_URI}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      BACKEND_PORT: ${BACKEND_PORT}
+    depends_on:
+      - mongo
+    networks:
+      - backend_net
+    # volumes:
+    #   - ../backend:/app
+    # No ports exposed: Backend is private (security requirement)
+
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile.dev
+    container_name: gateway-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: development
+      GATEWAY_PORT: ${GATEWAY_PORT}
+      BACKEND_URL: http://backend-dev:${BACKEND_PORT}
+    depends_on:
+      - backend
+    networks:
+      - backend_net
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    # volumes:
+    #   - ../gateway:/app
+
+networks:
+  backend_net:
+    driver: bridge
+
+volumes:
+  mongo_data_dev:
+  mongo_backup_dev:

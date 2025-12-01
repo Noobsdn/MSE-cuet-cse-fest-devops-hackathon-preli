@@ -1,0 +1,20 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy TypeScript config and source code into the image
+COPY tsconfig.json ./
+COPY src ./src
+
+ENV NODE_ENV=development
+
+# Backend will listen on BACKEND_PORT from env (3847),
+# but EXPOSE is just documentation / for tooling
+EXPOSE 3847
+
+# Start dev server (tsx watch src/index.ts)
+CMD ["npm", "run", "dev"]

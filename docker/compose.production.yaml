@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo-prod
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data_prod:/data/db
+      - mongo_backup_prod:/data/backup
+    networks:
+      - backend_net
+    # No ports exposed
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: backend-prod
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      MONGO_URI: ${MONGO_URI}
+      MONGO_DATABASE: ${MONGO_DATABASE}
+      BACKEND_PORT: ${BACKEND_PORT}
+    depends_on:
+      - mongo
+    networks:
+      - backend_net
+    # No ports exposed to host
+
+  gateway:
+    build:
+      context: ../gateway
+      dockerfile: Dockerfile
+    container_name: gateway-prod
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      GATEWAY_PORT: ${GATEWAY_PORT}
+      BACKEND_URL: http://backend-prod:${BACKEND_PORT}
+    depends_on:
+      - backend
+    networks:
+      - backend_net
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+
+networks:
+  backend_net:
+    driver: bridge
+
+volumes:
+  mongo_data_prod:
+  mongo_backup_prod:
